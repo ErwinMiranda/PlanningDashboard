@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Power BI Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #000;
+    }
+    iframe {
+      width: 100%;
+      height: 100vh;
+      border: none;
+      opacity: 1;
+      transition: opacity 1s ease-in-out;
+    }
+    #loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: white;
+      font-family: Arial, sans-serif;
+	font-size: 34px;
+    }
+  </style>
+</head>
+<body>
+  <div id="loading">Loading first report...</div>
+  <iframe id="powerbiFrame" allowfullscreen></iframe>
+
+  <script>
+    // Configuration
+    const rotationInterval = 23000; // 1 minute in milliseconds
+    const fadeDuration = 3000; // milliseconds
+    
+    // Report URLs - make sure these are correct and accessible
+    const reports = [
+      {
+        url: "https://app.powerbi.com/reportEmbed?reportId=818257e4-5e73-46c4-88fa-9e5bae5ca7b7&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
+        name: "Printing Dashboard"
+      },
+      {
+        url: "https://app.powerbi.com/reportEmbed?reportId=ee1f52e4-eab0-49de-95d5-3594d231035a&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
+        name: "MTC Loading Dashboard"
+      },
+	{
+	url:"https://app.powerbi.com/reportEmbed?reportId=15cdf462-cdd8-40a7-9c80-c2fcecf6861d&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
+	name: "Layover Preparation Report"
+	},
+
+	{
+	url:"https://app.powerbi.com/reportEmbed?reportId=7d2c988a-2cf4-4789-baec-0f3ae4436ccc&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
+	name: "Overtime Report"
+	}
+
+
+
+
+
+    ];
+
+    // DOM elements
+    const powerbiFrame = document.getElementById('powerbiFrame');
+    const loadingElement = document.getElementById('loading');
+    let currentReportIndex = 0;
+
+    // Main rotation function
+    function rotateReport() {
+      // Show loading message
+      loadingElement.textContent = `Loading ${reports[currentReportIndex].name}...`;
+      
+      // Fade out current report
+      powerbiFrame.style.opacity = 0;
+      
+      setTimeout(() => {
+        try {
+          // Update iframe source with cache-busting timestamp
+          const reportUrl = `${reports[currentReportIndex].url}&t=${Date.now()}`;
+          console.log("Loading report:", reportUrl);
+          powerbiFrame.src = reportUrl;
+          
+          // Move to next report (with wrap-around)
+          currentReportIndex = (currentReportIndex + 1) % reports.length;
+          
+          // Set up error handling for the iframe
+          powerbiFrame.onload = function() {
+            loadingElement.textContent = "";
+            powerbiFrame.style.opacity = 1;
+          };
+          
+          powerbiFrame.onerror = function() {
+            loadingElement.textContent = `Failed to load ${reports[currentReportIndex].name}`;
+            console.error("Failed to load report:", reports[currentReportIndex].url);
+            // Try next report immediately if this one fails
+            setTimeout(rotateReport, 3000);
+          };
+          
+        } catch (error) {
+          console.error("Error in rotateReport:", error);
+          loadingElement.textContent = "Error loading report";
+          setTimeout(rotateReport, 3000);
+        }
+      }, fadeDuration);
+    }
+
+    // Start the rotation
+    rotateReport();
+    
+    // Set up regular rotation
+    const rotationTimer = setInterval(rotateReport, rotationInterval);
+    
+    // For debugging - expose controls in console
+    window.dashboard = {
+      pause: () => clearInterval(rotationTimer),
+      resume: () => setInterval(rotateReport, rotationInterval),
+      next: () => {
+        clearInterval(rotationTimer);
+        rotateReport();
+        rotationTimer = setInterval(rotateReport, rotationInterval);
+      },
+      reports: reports
+    };
+    
+    console.log("Dashboard controls available in window.dashboard");
+  </script>
+</body>
+</html>
