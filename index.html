@@ -1,132 +1,377 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Power BI Dashboard</title>
-  <style>
-    body {
-      margin: 0;
-      padding: 0;
-      overflow: hidden;
-      background-color: #000;
-    }
-    iframe {
-      width: 100%;
-      height: 100vh;
-      border: none;
-      opacity: 1;
-      transition: opacity 1s ease-in-out;
-    }
-    #loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      color: white;
-      font-family: Arial, sans-serif;
-	font-size: 34px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Rotation with Birthdays</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* Container for all content */
+        #content-container {
+            width: 100%;
+            height: 100vh;
+            position: relative;
+            transition: opacity 0.5s ease-in-out;
+        }
+        
+        /* Power BI Report styling */
+        .powerbi-frame {
+            width: 100%;
+            height: 100vh;
+            border: none;
+        }
+        
+        /* Birthday Display styling */
+        .birthday-display {
+            width: 100%;
+            height: 100vh;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4e8f0 100%);
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .birthday-header {
+            text-align: center;
+            padding: 15px 20px;
+            background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            flex-shrink: 0;
+            z-index: 10;
+        }
+        
+        .birthday-title {
+            font-size: 2rem;
+            margin: 0;
+            font-weight: 300;
+        }
+        
+        .current-month {
+            font-size: 1.2rem;
+            margin: 5px 0 0;
+            font-weight: 300;
+        }
+        
+        .birthday-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .birthday-grid-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .birthday-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 10px;
+        }
+        
+        .single-celebrant {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        
+        .birthday-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+            text-align: center;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        .birthday-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .profile-image {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid #e0e6ff;
+            margin: 0 auto 15px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        
+        .celebrant-name {
+            color: #2c3e50;
+            font-size: 1.4rem;
+            margin: 0 0 8px;
+        }
+        
+        .celebrant-info {
+            color: #7f8c8d;
+            font-size: 1rem;
+            margin: 0 0 12px;
+            line-height: 1.4;
+        }
+        
+        .birthdate {
+            background: linear-gradient(to right, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 8px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            font-weight: bold;
+            font-size: 1rem;
+            margin-top: 10px;
+        }
+        
+        .no-birthdays {
+            text-align: center;
+            padding: 30px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            width: 90%;
+            margin: auto;
+        }
+        
+        .no-birthdays h2 {
+            color: #6a11cb;
+            font-size: 1.8rem;
+            margin-bottom: 15px;
+        }
+        
+        .no-birthdays p {
+            font-size: 1.1rem;
+            color: #7f8c8d;
+            line-height: 1.6;
+        }
+        
+        .celebration-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        @media (max-height: 700px) {
+            .profile-image {
+                width: 120px;
+                height: 120px;
+            }
+            .birthday-title {
+                font-size: 1.8rem;
+            }
+            .birthday-card {
+                padding: 15px;
+            }
+        }
+    </style>
 </head>
 <body>
-  <div id="loading">Loading first report...</div>
-  <iframe id="powerbiFrame" allowfullscreen></iframe>
+    <div id="content-container"></div>
 
-  <script>
-    // Configuration
-    const rotationInterval = 50000; //  in milliseconds
-    const fadeDuration = 3000; // milliseconds
-    
-    // Report URLs - make sure these are correct and accessible
-    const reports = [
-      {
-        url: "https://app.powerbi.com/reportEmbed?reportId=818257e4-5e73-46c4-88fa-9e5bae5ca7b7&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
-        name: "Printing Dashboard"
-      },
-      {
-        url: "https://app.powerbi.com/reportEmbed?reportId=ee1f52e4-eab0-49de-95d5-3594d231035a&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
-        name: "MTC Loading Dashboard"
-      },
-	{
-	url:"https://app.powerbi.com/reportEmbed?reportId=15cdf462-cdd8-40a7-9c80-c2fcecf6861d&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
-	name: "Layover Preparation Report"
-	},
+    <script>
+        // Configuration
+        const displayDuration = 10000; // 1 minute per display
+        const fadeDuration = 1000; // 1 second fade transition
+        
+        // Dashboard content to rotate through
+        const contentItems = [
+            {
+                type: "powerbi",
+                name: "Printing Dashboard",
+                url: "https://app.powerbi.com/reportEmbed?reportId=818257e4-5e73-46c4-88fa-9e5bae5ca7b7&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da"
+            },
+            {
+                type: "powerbi", 
+                name: "MTC Loading Dashboard",
+                url: "https://app.powerbi.com/reportEmbed?reportId=ee1f52e4-eab0-49de-95d5-3594d231035a&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da"
+            },
+	    {
+                type: "powerbi", 
+                name: "Layover Preparation Report",
+                url: "https://app.powerbi.com/reportEmbed?reportId=15cdf462-cdd8-40a7-9c80-c2fcecf6861d&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da"
+            },
 
-	{
-	url:"https://app.powerbi.com/reportEmbed?reportId=7d2c988a-2cf4-4789-baec-0f3ae4436ccc&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da",
-	name: "Overtime Report"
-	}
-
-
-
-
-
-    ];
-
-    // DOM elements
-    const powerbiFrame = document.getElementById('powerbiFrame');
-    const loadingElement = document.getElementById('loading');
-    let currentReportIndex = 0;
-
-    // Main rotation function
-    function rotateReport() {
-      // Show loading message
-      loadingElement.textContent = `Loading ${reports[currentReportIndex].name}...`;
-      
-      // Fade out current report
-      powerbiFrame.style.opacity = 0;
-      
-      setTimeout(() => {
-        try {
-          // Update iframe source with cache-busting timestamp
-          const reportUrl = `${reports[currentReportIndex].url}&t=${Date.now()}`;
-          console.log("Loading report:", reportUrl);
-          powerbiFrame.src = reportUrl;
-          
-          // Move to next report (with wrap-around)
-          currentReportIndex = (currentReportIndex + 1) % reports.length;
-          
-          // Set up error handling for the iframe
-          powerbiFrame.onload = function() {
-            loadingElement.textContent = "";
-            powerbiFrame.style.opacity = 1;
-          };
-          
-          powerbiFrame.onerror = function() {
-            loadingElement.textContent = `Failed to load ${reports[currentReportIndex].name}`;
-            console.error("Failed to load report:", reports[currentReportIndex].url);
-            // Try next report immediately if this one fails
-            setTimeout(rotateReport, 3000);
-          };
-          
-        } catch (error) {
-          console.error("Error in rotateReport:", error);
-          loadingElement.textContent = "Error loading report";
-          setTimeout(rotateReport, 3000);
+	    {
+                type: "powerbi", 
+                name: "Overtime Report",
+                url: "https://app.powerbi.com/reportEmbed?reportId=7d2c988a-2cf4-4789-baec-0f3ae4436ccc&autoAuth=true&ctid=8c09b36f-1cd8-4669-856e-1f79d5e305da"
+            },
+            {
+                type: "birthdays",
+                name: "Birthday Celebrants"
+            }
+        ];
+        
+        // Birthday data - TEST WITH DIFFERENT NUMBERS OF CELEBRANTS
+        const birthdayData = [
+            {
+                name: "SUING, ALYSSA B.",
+                image: "https://ltpsystems.sharepoint.com/:i:/s/BM11-projectplanning-estimation/EdoeCrnE8AlKt-C8tKIIJrsB9NS59Yc9p8o2jndFMX9bFg?e=TCAaU1",
+                birthdate: new Date("1997-07-28"),
+                department: "BM/P2",
+                position: "ENGINEER"
+            },
+            {
+                name: "ITLIONG, PATRICIA MAE I.",
+                image: "https://ltpsystems.sharepoint.com/:i:/s/BM11-projectplanning-estimation/EdB4dswFT2RIlxWmQjAljSMBDm52N-gbcPXZq7OBlNYBhA?e=iy0Gpb",
+                birthdate: new Date("1997-07-05"),
+                department: "BM/P1",
+                position: "PLANNING ENGINEER"
+            },
+                        {
+                name: "CARRANZA, JESAMINE M.",
+                image: "https://ltpsystems.sharepoint.com/:i:/s/BM11-projectplanning-estimation/EZq5AJXNxzZIp-AzZH4CeSwBabw4VAIhLjOD7dSb3s_ZFw?e=BnGJWz",
+                birthdate: new Date("1984-07-06"),
+                department: "BM/P2",
+                position: "SR. ENGINEER"
+            },
+                        {
+                name: "SEVILLA, EMILYN B.",
+                image: "https://ltpsystems.sharepoint.com/:i:/s/BM11-projectplanning-estimation/EZq5AJXNxzZIp-AzZH4CeSwBabw4VAIhLjOD7dSb3s_ZFw?e=BnGJWz",
+                birthdate: new Date("1982-07-18"),
+                department: "BM/P2",
+                position: "SR. PRODUCTION CONTROLLER"
+            }
+            /* Add or remove celebrants to test different layouts */
+        ];
+        
+        // DOM elements
+        const contentContainer = document.getElementById('content-container');
+        let currentItemIndex = 0;
+        
+        // Month names for display
+        const monthNames = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+        
+        // Show Power BI Report
+        function showPowerBIReport(url) {
+            contentContainer.innerHTML = `
+                <iframe class="powerbi-frame" src="${url}&t=${Date.now()}" allowfullscreen></iframe>
+            `;
         }
-      }, fadeDuration);
-    }
-
-    // Start the rotation
-    rotateReport();
-    
-    // Set up regular rotation
-    const rotationTimer = setInterval(rotateReport, rotationInterval);
-    
-    // For debugging - expose controls in console
-    window.dashboard = {
-      pause: () => clearInterval(rotationTimer),
-      resume: () => setInterval(rotateReport, rotationInterval),
-      next: () => {
-        clearInterval(rotationTimer);
-        rotateReport();
-        rotationTimer = setInterval(rotateReport, rotationInterval);
-      },
-      reports: reports
-    };
-    
-    console.log("Dashboard controls available in window.dashboard");
-  </script>
+        
+        // Show Birthday Display
+        function showBirthdayDisplay() {
+            const currentDate = new Date();
+            const currentMonth = currentDate.getMonth();
+            
+            // Filter birthdays for current month
+            const currentMonthBirthdays = birthdayData.filter(person => 
+                person.birthdate.getMonth() === currentMonth
+            );
+            
+            // Sort by date
+            currentMonthBirthdays.sort((a, b) => a.birthdate.getDate() - b.birthdate.getDate());
+            
+            // Generate HTML based on number of celebrants
+            let birthdayHTML = '';
+            
+            if (currentMonthBirthdays.length === 0) {
+                birthdayHTML = `
+                    <div class="no-birthdays">
+                        <div class="celebration-icon">🎉</div>
+                        <h2>No Birthdays This Month</h2>
+                        <p>There are no birthdays to celebrate this month. Check back next month!</p>
+                    </div>
+                `;
+            } 
+            else if (currentMonthBirthdays.length === 1) {
+                // Special layout for single celebrant
+                const person = currentMonthBirthdays[0];
+                birthdayHTML = `
+                    <div class="single-celebrant">
+                        <div class="birthday-card">
+                            <img src="${person.image}" alt="${person.name}" class="profile-image">
+                            <h2 class="celebrant-name">${person.name}</h2>
+                            <p class="celebrant-info">${person.position}<br>${person.department}</p>
+                            <div class="birthdate">
+                                ${monthNames[person.birthdate.getMonth()]} ${person.birthdate.getDate()}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } 
+            else {
+                // Grid layout for multiple celebrants
+                birthdayHTML = `
+                    <div class="birthday-grid">
+                        ${currentMonthBirthdays.map(person => `
+                            <div class="birthday-card">
+                                <img src="${person.image}" alt="${person.name}" class="profile-image">
+                                <h3 class="celebrant-name">${person.name}</h3>
+                                <p class="celebrant-info">${person.position}<br>${person.department}</p>
+                                <div class="birthdate">
+                                    ${monthNames[person.birthdate.getMonth()]} ${person.birthdate.getDate()}
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            contentContainer.innerHTML = `
+                <div class="birthday-display">
+                    <div class="birthday-header">
+                        <h1 class="birthday-title">Birthday Celebrants</h1>
+                        <p class="current-month">${monthNames[currentMonth]}</p>
+                    </div>
+                    <div class="birthday-content">
+                        <div class="birthday-grid-container">
+                            ${birthdayHTML}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Rotate through content items
+        function rotateContent() {
+            // Fade out current content
+            contentContainer.style.opacity = 0;
+            
+            setTimeout(() => {
+                const currentItem = contentItems[currentItemIndex];
+                
+                if (currentItem.type === "powerbi") {
+                    showPowerBIReport(currentItem.url);
+                } else if (currentItem.type === "birthdays") {
+                    showBirthdayDisplay();
+                }
+                
+                // Move to next item
+                currentItemIndex = (currentItemIndex + 1) % contentItems.length;
+                
+                // Fade in new content
+                setTimeout(() => {
+                    contentContainer.style.opacity = 1;
+                }, 50);
+                
+            }, fadeDuration);
+        }
+        
+        // Start rotation
+        rotateContent();
+        setInterval(rotateContent, displayDuration);
+    </script>
 </body>
 </html>
